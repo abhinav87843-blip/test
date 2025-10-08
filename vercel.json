@@ -3,5 +3,11 @@
     "api/collect.js": {
       "maxDuration": 10
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/collect",
+      "destination": "/api/collect.js"
+    }
+  ]
 }
